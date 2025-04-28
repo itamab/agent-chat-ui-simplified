@@ -6,34 +6,28 @@ import { useStreamContext } from "@/providers/Stream";
 import { useState, FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
-import {
-  DO_NOT_RENDER_ID_PREFIX,
-  ensureToolCallsHaveResponses,
-} from "@/lib/ensure-tool-responses";
-import {
-  LoaderCircle,  
-} from "lucide-react";
+import { DO_NOT_RENDER_ID_PREFIX, ensureToolCallsHaveResponses} from "@/lib/ensure-tool-responses";
+import { LoaderCircle } from "lucide-react";
 import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { toast } from "sonner";
 import { Fragment } from "react/jsx-runtime";
 import { LoadExternalComponent } from "@langchain/langgraph-sdk/react-ui";
 import { getContentString } from "./utils";
+import { WeatherComponent } from "../ui/weather";
 
-function CustomComponent({
-  message,
-  thread,
-}: {
+const clientComponents = {
+  weather: WeatherComponent,
+};
+
+function CustomComponent({message, thread}: {
   message: Message;
   thread: ReturnType<typeof useStreamContext>;
 }) {
   const { values } = useStreamContext();
-  const customComponents = values.ui?.filter(
-    (ui) => ui.metadata?.message_id === message.id,
-  );
-  
+  const customComponents = values.ui?.filter((ui) => ui.metadata?.message_id === message.id);  
   if (!customComponents?.length) return null;
-  //alert(Object.getOwnPropertyNames(customComponents[0].metadata))
+  
   return (
     <Fragment key={message.id}>
       {customComponents.map((customComponent) => (
@@ -41,6 +35,7 @@ function CustomComponent({
           key={customComponent.id}
           stream={thread}
           message={customComponent}          
+          components={clientComponents}
         />
       ))}
     </Fragment>
@@ -85,12 +80,16 @@ export function Thread() {
 
   // handle loading errors
   useEffect(() => {
+    
     if (!stream.error) {
       lastError.current = undefined;
       return;
     }
+
     try {
+      
       const message = (stream.error as any).message;
+      
       if (!message || lastError.current === message) {
         // Message has already been logged. do not modify ref, return early.
         return;
@@ -98,6 +97,7 @@ export function Thread() {
 
       // Message is defined, and it has not been logged yet. Save it, and send the error
       lastError.current = message;
+      
       toast.error("An error occurred. Please try again.", {
         description: (
           <p>
@@ -114,6 +114,7 @@ export function Thread() {
 
   // TODO: this should be part of the useStream hook
   const prevMessageLength = useRef(0);
+  
   useEffect(() => {
     if (
       messages.length !== prevMessageLength.current &&
@@ -138,6 +139,7 @@ export function Thread() {
     };
 
     const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+
     stream.submit(
       { messages: [...toolMessages, newHumanMessage] },
       {
@@ -182,18 +184,19 @@ export function Thread() {
       >
         <StickToBottom className="relative flex-1 overflow-hidden">
           <StickyToBottomContent
+            
             className={cn(
               "absolute px-4 inset-0 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
               false,
               "grid grid-rows-[1fr_auto]",
             )}
+
             contentClassName="pt-8 pb-16  max-w-3xl mx-auto flex flex-col gap-4 w-full"
+            
             content={
               <>
-                {messages
-                  .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
-                  .map((message, index) =>
-                    message.type === "human" ? (
+                {messages.filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX)).map(
+                  (message, index) => message.type === "human" ? (
                       <div key={message.id || `${message.type}-${index}`}>                        
                         <p className="align-right px-4 py-2 rounded-3xl bg-muted w-fit ml-auto whitespace-pre-wrap">
                           {getContentString(message.content)}
@@ -205,6 +208,7 @@ export function Thread() {
                   )}                
               </>
             }
+
             footer={ //input box and send button
               <div className="sticky flex flex-col items-center gap-8 bottom-0 bg-white">
 
